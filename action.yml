@@ -1,0 +1,46 @@
+name: setup-ward
+description: Install ward and export the values of its scopes to the job, masked.
+author: br4zz4
+inputs:
+  vault:
+    description: Project namespace of the ward vaults, e.g. has_warranty
+    required: true
+  key:
+    description: Key of the default vault; exported as WARD_KEY_<NAMESPACE>
+    required: true
+  restricted-key:
+    description: Key of the restricted vault; exported as WARD_KEY_<NAMESPACE>_RESTRICTED. Empty skips it
+    default: ''
+  scopes:
+    description: Scopes to export, one per line, already qualified (<vault>:secrets.<path>)
+    default: ''
+  version:
+    description: ward release to install, without the leading v
+    default: '0.5.1'
+  directory:
+    description: Directory holding .ward/config.yaml, relative to the workspace
+    default: '.'
+runs:
+  using: composite
+  steps:
+    - name: install ward
+      shell: bash
+      env:
+        WARD_VERSION: ${{ inputs.version }}
+      run: bash "${{ github.action_path }}/install.sh"
+
+    - name: export keys
+      shell: bash
+      env:
+        VAULT: ${{ inputs.vault }}
+        KEY: ${{ inputs.key }}
+        RESTRICTED_KEY: ${{ inputs.restricted-key }}
+      run: python3 "${{ github.action_path }}/keys.py"
+
+    - name: export scopes
+      shell: bash
+      working-directory: ${{ inputs.directory }}
+      env:
+        SCOPES: ${{ inputs.scopes }}
+        EXPORT: ${{ github.action_path }}/export.py
+      run: bash "${{ github.action_path }}/scopes.sh"
