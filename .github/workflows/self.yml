@@ -1,0 +1,44 @@
+name: self
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: check
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+
+      - name: syntax
+        run: python3 -m py_compile export.py keys.py
+
+      - name: shell
+        run: shellcheck -S warning install.sh scopes.sh tests/run.sh
+
+      - name: tests
+        run: sh tests/run.sh
+
+  install:
+    name: install
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+
+      - name: setup-ward
+        uses: ./
+        with:
+          vault: smoke
+          key: not-a-real-key
+
+      - name: ward
+        run: ward version && test -n "${WARD_KEY_SMOKE}"
