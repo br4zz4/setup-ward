@@ -16,7 +16,7 @@ inputs:
     default: ''
   version:
     description: ward release to install, without the leading v
-    default: '0.5.1'
+    default: '0.6.2'
   directory:
     description: Directory holding .ward/config.yaml, relative to the workspace
     default: '.'
