@@ -14,6 +14,9 @@ inputs:
   scopes:
     description: Scopes to export, one per line, already qualified (<vault>:secrets.<path>)
     default: ''
+  export-key:
+    description: 'false keeps WARD_KEY_<NAMESPACE> (and _RESTRICTED) out of the job environment; they are masked either way and the scope values are still exported'
+    default: 'true'
   version:
     description: ward release to install, without the leading v
     default: '0.6.2'
@@ -35,12 +38,16 @@ runs:
         VAULT: ${{ inputs.vault }}
         KEY: ${{ inputs.key }}
         RESTRICTED_KEY: ${{ inputs.restricted-key }}
+        EXPORT_KEY: ${{ inputs.export-key }}
       run: python3 "${{ github.action_path }}/keys.py"
 
     - name: export scopes
       shell: bash
       working-directory: ${{ inputs.directory }}
       env:
+        VAULT: ${{ inputs.vault }}
+        KEY: ${{ inputs.key }}
+        RESTRICTED_KEY: ${{ inputs.restricted-key }}
         SCOPES: ${{ inputs.scopes }}
         EXPORT: ${{ github.action_path }}/export.py
       run: bash "${{ github.action_path }}/scopes.sh"

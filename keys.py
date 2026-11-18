@@ -3,7 +3,8 @@
 
 The env name follows ward's own derivation: every character outside [A-Za-z0-9]
 becomes an underscore and the result is upper-cased. Keys are masked before they
-are written. Environment: VAULT, KEY, RESTRICTED_KEY (optional), GITHUB_ENV.
+are written. Environment: VAULT, KEY, RESTRICTED_KEY (optional), EXPORT_KEY ('false' masks
+without exporting), GITHUB_ENV.
 """
 
 import os
@@ -13,6 +14,7 @@ import sys
 VAULT = os.environ.get("VAULT", "")
 KEY = os.environ.get("KEY", "")
 RESTRICTED = os.environ.get("RESTRICTED_KEY", "")
+EXPORT = os.environ.get("EXPORT_KEY", "true") != "false"
 
 
 def env_name(vault, restricted=False):
@@ -34,9 +36,12 @@ def main():
     entries = [(env_name(VAULT), KEY)]
     if RESTRICTED:
         entries.append((env_name(VAULT, True), RESTRICTED))
+    for _, value in entries:
+        print(f"::add-mask::{value}")
+    if not EXPORT:
+        return 0
     with open(path, "a", encoding="utf-8") as handle:
         for name, value in entries:
-            print(f"::add-mask::{value}")
             handle.write(f"{name}={value}\n")
     return 0
 
