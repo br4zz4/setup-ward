@@ -162,7 +162,7 @@ mkdir -p "$BIN"
 cat > "$BIN/ward" <<'EOF'
 #!/bin/sh
 echo "$*" >> "$WARD_LOG"
-env | grep '^WARD_KEY_' | sort >> "${WARD_ENVLOG:-/dev/null}"
+env | grep '^WARD_KEY_' | LC_ALL=C sort >> "${WARD_ENVLOG:-/dev/null}"
 [ "$1" = secrets ] && [ "$2" = --json ] || exit 9
 if [ "$3" = "${WARD_FAIL:-}" ]; then
   exit 1
@@ -231,8 +231,8 @@ run_scopes_keys() {
 
 run_scopes_keys VAULT=acme KEY=k1 RESTRICTED_KEY=r1
 check "scopes keys: exit 0" 0 "$RC"
-check "scopes keys: ward receives both keys" "WARD_KEY_ACME_RESTRICTED=r1
-WARD_KEY_ACME=k1" "$(cat "$WARD_ENVLOG")"
+check "scopes keys: ward receives both keys" "WARD_KEY_ACME=k1
+WARD_KEY_ACME_RESTRICTED=r1" "$(cat "$WARD_ENVLOG")"
 lacks "scopes keys: job env has no key" "WARD_KEY_" "$(cat "$ENVF")"
 contains "scopes keys: values exported" "V_alpha" "$(cat "$ENVF")"
 
