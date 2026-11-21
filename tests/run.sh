@@ -162,6 +162,7 @@ mkdir -p "$BIN"
 cat > "$BIN/ward" <<'EOF'
 #!/bin/sh
 echo "$*" >> "$WARD_LOG"
+env | grep '^WARD_KEY_' | LC_ALL=C sort >> "${WARD_ENVLOG:-/dev/null}"
 [ "$1" = secrets ] && [ "$2" = --json ] || exit 9
 if [ "$3" = "${WARD_FAIL:-}" ]; then
   exit 1
@@ -198,6 +199,65 @@ contains "scopes: reached failing scope" "secrets --json beta" "$(cat "$WARD_LOG
 run_scopes "" ""
 check "scopes: empty SCOPES exit" 0 "$RC"
 check "scopes: empty SCOPES no calls" 0 "$(wc -c < "$WARD_LOG" | tr -d ' ')"
+
+run_keys VAULT=acme KEY=k1 RESTRICTED_KEY=r1 EXPORT_KEY=false
+check "keys: export false exit" 0 "$RC"
+check "keys: export false writes nothing" 0 "$(wc -c < "$ENVF" | tr -d ' ')"
+contains "keys: export false masks key" "::add-mask::k1" "$OUT"
+contains "keys: export false masks restricted" "::add-mask::r1" "$OUT"
+
+run_keys VAULT=acme KEY=k1 EXPORT_KEY=false
+check "keys: export false without restricted writes nothing" 0 "$(wc -c < "$ENVF" | tr -d ' ')"
+contains "keys: export false without restricted masks key" "::add-mask::k1" "$OUT"
+
+run_keys VAULT=acme KEY=k1 RESTRICTED_KEY=r1 EXPORT_KEY=true
+check "keys: export true writes both" "WARD_KEY_ACME=k1
+WARD_KEY_ACME_RESTRICTED=r1" "$(cat "$ENVF")"
+
+run_keys VAULT=acme KEY=k1 RESTRICTED_KEY=r1
+check "keys: export omitted writes both" "WARD_KEY_ACME=k1
+WARD_KEY_ACME_RESTRICTED=r1" "$(cat "$ENVF")"
+
+run_scopes_keys() {
+  ENVF="$TMP/env"
+  : > "$ENVF"
+  WARD_LOG="$TMP/ward.log"
+  : > "$WARD_LOG"
+  WARD_ENVLOG="$TMP/ward.env"
+  : > "$WARD_ENVLOG"
+  OUT="$(env -u KEY -u RESTRICTED_KEY -u VAULT PATH="$BIN:$PATH" WARD_LOG="$WARD_LOG" WARD_ENVLOG="$WARD_ENVLOG" WARD_FAIL= GITHUB_ENV="$ENVF" EXPORT="$ROOT/export.py" SCOPES="alpha" "$@" bash "$ROOT/scopes.sh" 2>&1)"
+  RC=$?
+}
+
+run_scopes_keys VAULT=acme KEY=k1 RESTRICTED_KEY=r1
+check "scopes keys: exit 0" 0 "$RC"
+check "scopes keys: ward receives both keys" "WARD_KEY_ACME=k1
+WARD_KEY_ACME_RESTRICTED=r1" "$(cat "$WARD_ENVLOG")"
+lacks "scopes keys: job env has no key" "WARD_KEY_" "$(cat "$ENVF")"
+contains "scopes keys: values exported" "V_alpha" "$(cat "$ENVF")"
+
+run_scopes_keys VAULT=acme KEY=k1
+check "scopes keys: ward receives only key" "WARD_KEY_ACME=k1" "$(cat "$WARD_ENVLOG")"
+
+run_scopes_keys
+check "scopes keys: nothing without vault and key" 0 "$(wc -c < "$WARD_ENVLOG" | tr -d ' ')"
+
+run_scopes_keys VAULT=acme
+check "scopes keys: nothing without key" 0 "$(wc -c < "$WARD_ENVLOG" | tr -d ' ')"
+
+run_scopes_keys KEY=k1
+check "scopes keys: nothing without vault" 0 "$(wc -c < "$WARD_ENVLOG" | tr -d ' ')"
+
+ENVF="$TMP/env"
+: > "$ENVF"
+env -u KEY -u RESTRICTED_KEY -u VAULT GITHUB_ENV="$ENVF" VAULT=acme KEY=k1 RESTRICTED_KEY=r1 EXPORT_KEY=false python3 "$ROOT/keys.py" > /dev/null 2>&1
+WARD_ENVLOG="$TMP/ward.env"
+: > "$WARD_ENVLOG"
+: > "$TMP/ward.log"
+PATH="$BIN:$PATH" WARD_LOG="$TMP/ward.log" WARD_ENVLOG="$WARD_ENVLOG" WARD_FAIL='' GITHUB_ENV="$ENVF" EXPORT="$ROOT/export.py" SCOPES="alpha${NL}beta" VAULT=acme KEY=k1 RESTRICTED_KEY=r1 bash "$ROOT/scopes.sh" > /dev/null 2>&1
+check "full: scope values present" '{"V_alpha": "val-alpha", "V_beta": "val-beta"}' "$(field "$(parsed)" vars)"
+lacks "full: no ward key in job env" "WARD_KEY_" "$(cat "$ENVF")"
+check "full: ward still got the keys twice" 4 "$(wc -l < "$WARD_ENVLOG" | tr -d ' ')"
 
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

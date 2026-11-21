@@ -20,6 +20,7 @@ the values of its scopes to the steps that follow, masked.
 | `key` | key of the default vault; exported as `WARD_KEY_<NAMESPACE>` |
 | `restricted-key` | key of the restricted vault; exported as `WARD_KEY_<NAMESPACE>_RESTRICTED`; empty skips it |
 | `scopes` | scopes to export, one per line, already qualified with the vault |
+| `export-key` | `true` (default) exports the keys; `false` masks them but keeps `WARD_KEY_*` out of the job environment, for jobs that run code that must not reach the vault. The scope values are exported either way |
 | `version` | ward release to install, default `0.5.1`; the download is verified against the release `checksums.txt` |
 | `directory` | directory with `.ward/config.yaml`, default the workspace root |
 
