@@ -254,7 +254,7 @@ env -u KEY -u RESTRICTED_KEY -u VAULT GITHUB_ENV="$ENVF" VAULT=acme KEY=k1 RESTR
 WARD_ENVLOG="$TMP/ward.env"
 : > "$WARD_ENVLOG"
 : > "$TMP/ward.log"
-PATH="$BIN:$PATH" WARD_LOG="$TMP/ward.log" WARD_ENVLOG="$WARD_ENVLOG" WARD_FAIL= GITHUB_ENV="$ENVF" EXPORT="$ROOT/export.py" SCOPES="alpha${NL}beta" VAULT=acme KEY=k1 RESTRICTED_KEY=r1 bash "$ROOT/scopes.sh" > /dev/null 2>&1
+PATH="$BIN:$PATH" WARD_LOG="$TMP/ward.log" WARD_ENVLOG="$WARD_ENVLOG" WARD_FAIL='' GITHUB_ENV="$ENVF" EXPORT="$ROOT/export.py" SCOPES="alpha${NL}beta" VAULT=acme KEY=k1 RESTRICTED_KEY=r1 bash "$ROOT/scopes.sh" > /dev/null 2>&1
 check "full: scope values present" '{"V_alpha": "val-alpha", "V_beta": "val-beta"}' "$(field "$(parsed)" vars)"
 lacks "full: no ward key in job env" "WARD_KEY_" "$(cat "$ENVF")"
 check "full: ward still got the keys twice" 4 "$(wc -l < "$WARD_ENVLOG" | tr -d ' ')"
